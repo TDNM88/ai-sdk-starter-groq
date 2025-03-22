@@ -19,6 +19,7 @@ export default function Chat() {
     error,
     status,
     stop,
+    append, // Add append to destructuring
   } = useChat({
     maxSteps: 5,
     body: {
@@ -28,15 +29,17 @@ export default function Chat() {
 
   const isLoading = status === "streaming" || status === "submitted";
 
-   const sendMessage = (input: string) => {
-     append({ role: "user", content: input });
-   };
+  // Use sendMessage function
+  const sendMessage = (input: string) => {
+    append({ role: "user", content: input });
+  };
 
   if (error) return <div>{error.message}</div>;
 
   return (
     <div className="h-dvh flex flex-col justify-center w-full stretch">
       <Header />
+      <ModelPicker selectedModel={selectedModel} setSelectedModel={setSelectedModel} /> {/* Use ModelPicker */}
       {messages.length === 0 ? (
         <div className="max-w-xl mx-auto w-full">
           <ProjectOverview />
@@ -46,7 +49,11 @@ export default function Chat() {
         <Messages messages={messages} isLoading={isLoading} status={status} />
       )}
       <form
-        onSubmit={handleSubmit}
+        onSubmit={(e) => {
+          e.preventDefault();
+          sendMessage(input); // Call sendMessage on submit
+          handleSubmit(e); // Call existing handleSubmit
+        }}
         className="pb-8 bg-white dark:bg-black w-full max-w-xl mx-auto px-4 sm:px-0"
       >
         {/* <Input
@@ -56,7 +63,6 @@ export default function Chat() {
           status={status}
           stop={stop}
         /> */}
-
         <Textarea
           selectedModel={selectedModel}
           setSelectedModel={setSelectedModel}
