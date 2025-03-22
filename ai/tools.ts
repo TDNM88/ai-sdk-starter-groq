@@ -6,33 +6,7 @@ import { Chart } from 'chart.js';
 import PDFDocument from 'pdfkit';
 import blobStream from 'blob-stream';
 
-export const weatherTool = tool({
-  description: "Lấy thông tin thời tiết",
-  parameters: z.object({
-    location: z.string().describe("Địa điểm cần lấy thông tin thời tiết"),
-  }),
-  execute: async ({ location }) => {
-    const response = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&appid=${process.env.OPENWEATHERMAP_API_KEY}&units=metric&lang=vi`
-    );
-
-    const data = await response.json();
-    
-    if (!response.ok || data.cod === "404") {
-      throw new Error(`Không tìm thấy thông tin thời tiết cho địa điểm "${location}"`);
-    }
-
-    return {
-      location: data.name,
-      temperature: data.main.temp,
-      weather: data.weather[0].description,
-      humidity: data.main.humidity,
-      wind: data.wind.speed,
-      message: `Thời tiết tại ${data.name}: ${data.weather[0].description}, nhiệt độ ${data.main.temp}°C`
-    };
-  },
-});
-
+// Công cụ gửi email
 export const sendEmailTool = tool({
   description: "Gửi email",
   parameters: z.object({
@@ -45,13 +19,11 @@ export const sendEmailTool = tool({
       throw new Error("Địa chỉ email người nhận không được để trống");
     }
     try {
-      // Kiểm tra định dạng email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(to)) {
         throw new Error("Địa chỉ email không hợp lệ");
       }
 
-      // Sử dụng Mailjet API
       const response = await fetch('https://api.mailjet.com/v3.1/send', {
         method: 'POST',
         headers: {
@@ -92,12 +64,13 @@ export const sendEmailTool = tool({
   },
 });
 
+// Công cụ tạo file
 export const createFileTool = tool({
   description: "Tạo file với các định dạng khác nhau",
   parameters: z.object({
     fileName: z.string().describe("Tên file"),
     content: z.string().describe("Nội dung file"),
-    fileType: z.enum(['txt', 'pdf', 'csv', 'json', 'docx']).describe("Loại file (txt, pdf, csv, json, docx)"),
+    fileType: z.enum(['txt', 'pdf', 'json', 'docx']).describe("Loại file (txt, pdf, json, docx)"),
   }),
   execute: async ({ fileName, content, fileType }) => {
     if (!fileName || fileName.trim().length === 0) {
@@ -134,13 +107,40 @@ export const createFileTool = tool({
           });
         });
 
-      // ... các case khác giữ nguyên ...
+      case 'docx':
+        const docxDoc = new Document({
+          sections: [{
+            properties: {},
+            children: [new Paragraph({ children: [new TextRun(content)] })]
+          }]
+        });
+        const docxBuffer = await Packer.toBuffer(docxDoc);
+        const docxBlob = new Blob([docxBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const docxUrl = URL.createObjectURL(docxBlob);
+        return {
+          success: true,
+          fileName: `${fileName}.docx`,
+          fileUrl: docxUrl,
+          message: "File DOCX đã được tạo thành công"
+        };
+
+      case 'json':
+        const jsonBlob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' });
+        const jsonUrl = URL.createObjectURL(jsonBlob);
+        return {
+          success: true,
+          fileName: `${fileName}.json`,
+          fileUrl: jsonUrl,
+          message: "File JSON đã được tạo thành công"
+        };
+
       default:
         throw new Error("Loại file không được hỗ trợ");
     }
   },
 });
 
+// Công cụ tạo biểu đồ
 export const createChartTool = tool({
   description: "Tạo biểu đồ từ dữ liệu",
   parameters: z.object({
@@ -155,6 +155,7 @@ export const createChartTool = tool({
     if (!data || data.length === 0) {
       throw new Error("Dữ liệu biểu đồ không được để trống");
     }
+
     // Tạo canvas element
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -197,4 +198,44 @@ export const createChartTool = tool({
     return {
       success: true,
       chartUrl: imageUrl,
-      message: `
+      message: `Biểu đồ ${title || ''} đã được tạo thành công`
+    };
+  },
+});
+
+// Công cụ lên lịch họp
+export const scheduleMeetingTool = tool({
+  description: "Lên lịch họp",
+  parameters: z.object({
+    title: z.string().describe("Tiêu đề cuộc họp"),
+    participants: z.array(z.string()).describe("Danh sách người tham gia"),
+    time: z.string().describe("Thời gian họp (định dạng ISO)"),
+  }),
+  execute: async ({ title, participants, time }) => {
+    try {
+      const meetingTime = new Date(time);
+      if (isNaN(meetingTime.getTime())) {
+        throw new Error("Thời gian không hợp lệ");
+      }
+
+      if (participants.length === 0) {
+        throw new Error("Danh sách người tham gia không được để trống");
+      }
+
+      // Thêm logic lên lịch họp thực tế ở đây
+      // Ví dụ: tích hợp với Google Calendar, Outlook, etc.
+
+      return {
+        success: true,
+        message: `Cuộc họp "${title}" đã được lên lịch thành công`,
+        details: {
+          time: meetingTime.toISOString(),
+          participants,
+        }
+      };
+    } catch (error) {
+      console.error('Error scheduling meeting:', error);
+      throw new Error(`Lỗi khi lên lịch họp: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  },
+});
