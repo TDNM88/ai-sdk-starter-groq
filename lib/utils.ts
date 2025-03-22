@@ -8,12 +8,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function cleanupTempFiles() {
+export const cleanupTempFiles = () => {
   const tempDir = path.join(os.tmpdir(), 'tdnm-chat');
   if (fs.existsSync(tempDir)) {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
-}
+};
 
 export function cleanupOldFiles(maxAge: number = 24 * 60 * 60 * 1000) {
   const tempDir = path.join(os.tmpdir(), 'tdnm-chat');

@@ -106,9 +106,16 @@ export default function Chat() {
   };
 
   useEffect(() => {
-    // Dọn dẹp file tạm thời khi component unmount
+    const cleanup = async () => {
+      try {
+        await fetch('/api/cleanup', { method: 'POST' });
+      } catch (error) {
+        console.error('Error cleaning up temp files:', error);
+      }
+    };
+
     return () => {
-      cleanupTempFiles();
+      cleanup();
     };
   }, []);
 
