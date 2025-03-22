@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vercel x Groq Chatbot",
+  title: "TDNM ASSISTANT",
   description:
-    "This starter project uses Groq with the AI SDK via the Vercel Marketplace",
+    "VIRTUAL Employee Products",
 };
 
 export default function RootLayout({
@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="vi">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
