@@ -17,27 +17,29 @@ const selectedModel: modelID = "deepseek-r1-distill-llama-70b";
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
+  console.log('Received request');
   const formData = await req.formData();
   const message = formData.get('message') as string;
   const file = formData.get('file') as File | null;
+  console.log('Message:', message);
+  console.log('File:', file);
 
   try {
     let tempFilePath: string | null = null;
     
     if (file) {
-      // Dọn dẹp file cũ trước khi lưu file mới
+      console.log('Processing file...');
       cleanupOldFiles();
       
-      // Tạo thư mục tạm thời nếu chưa tồn tại
       const tempDir = path.join(os.tmpdir(), 'tdnm-chat');
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
 
-      // Lưu file tạm thời
       const fileBuffer = await file.arrayBuffer();
       tempFilePath = path.join(tempDir, file.name);
       fs.writeFileSync(tempFilePath, Buffer.from(fileBuffer));
+      console.log('File saved at:', tempFilePath);
     }
 
     const result = streamText({
