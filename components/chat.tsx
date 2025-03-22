@@ -3,7 +3,7 @@
 import { modelID } from "@/ai/providers";
 import { useChat } from "@ai-sdk/react";
 import { useState } from "react";
-// import { ModelPicker } from "./model-picker";
+import { ModelPicker } from "./model-picker";
 import { Textarea } from "./textarea";
 import { ProjectOverview } from "./project-overview";
 import { Messages } from "./messages";
@@ -28,9 +28,9 @@ export default function Chat() {
 
   const isLoading = status === "streaming" || status === "submitted";
 
-  // const sendMessage = (input: string) => {
-  //   append({ role: "user", content: input });
-  // };
+   const sendMessage = (input: string) => {
+     append({ role: "user", content: input });
+   };
 
   if (error) return <div>{error.message}</div>;
 
