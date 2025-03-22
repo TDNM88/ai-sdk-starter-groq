@@ -8,7 +8,6 @@ import { Textarea } from "./textarea";
 import { ProjectOverview } from "./project-overview";
 import { Messages } from "./messages";
 import { Header } from "./header";
-import { cleanupTempFiles } from '@/lib/utils';
 
 interface ChatInputProps {
   onSend: (message: string, file?: File) => void;
@@ -56,7 +55,18 @@ const ChatInput = ({ onSend }: ChatInputProps) => {
   );
 };
 
-const Message = ({ message, isUser }: { message: any, isUser: boolean }) => {
+interface MessageProps {
+  message: {
+    text: string;
+    file?: {
+      name: string;
+      url: string;
+    };
+  };
+  isUser: boolean;
+}
+
+const Message = ({ message, isUser }: MessageProps) => {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-[80%] p-3 rounded-lg ${
@@ -104,20 +114,6 @@ export default function Chat() {
   const sendMessage = (input: string) => {
     append({ role: "user", content: input });
   };
-
-  useEffect(() => {
-    const cleanup = async () => {
-      try {
-        await fetch('/api/cleanup', { method: 'POST' });
-      } catch (error) {
-        console.error('Error cleaning up temp files:', error);
-      }
-    };
-
-    return () => {
-      cleanup();
-    };
-  }, []);
 
   if (error) return <div>{error.message}</div>;
 
