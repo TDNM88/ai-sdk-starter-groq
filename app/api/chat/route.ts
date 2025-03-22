@@ -11,9 +11,10 @@ export async function POST(req: Request) {
     selectedModel,
   }: { messages: UIMessage[]; selectedModel: modelID } = await req.json();
 
-  const result = streamText({
-    model: model.languageModel(selectedModel),
-    system: `Bạn là một trợ lý AI thông minh và hữu ích của TDNM. Nhiệm vụ của bạn là hỗ trợ người dùng với các công việc văn phòng và trả lời các câu hỏi một cách chính xác và thân thiện.
+  try {
+    const result = streamText({
+      model: model.languageModel(selectedModel),
+      system: `Bạn là một trợ lý AI thông minh và hữu ích của TDNM. Nhiệm vụ của bạn là hỗ trợ người dùng với các công việc văn phòng và trả lời các câu hỏi một cách chính xác và thân thiện.
 
 Hãy tuân thủ các nguyên tắc sau:
 1. Luôn trả lời bằng tiếng Việt, trừ khi được yêu cầu cụ thể
@@ -32,19 +33,28 @@ Các công cụ bạn có thể sử dụng:
 - search: Tìm kiếm thông tin trên web
 
 Hãy luôn đảm bảo rằng bạn đang cung cấp thông tin hữu ích và chính xác nhất có thể.`,
-    messages,
-    tools: {
-      getWeather: weatherTool,
-      sendEmail: sendEmailTool,
-      createFile: createFileTool,
-      scheduleMeeting: scheduleMeetingTool,
-      createChart: createChartTool,
-      search: searchTool
-    },
-    experimental_telemetry: {
-      isEnabled: true,
-    },
-  });
+      messages,
+      tools: {
+        getWeather: weatherTool,
+        sendEmail: sendEmailTool,
+        createFile: createFileTool,
+        scheduleMeeting: scheduleMeetingTool,
+        createChart: createChartTool,
+        search: searchTool
+      },
+      experimental_telemetry: {
+        isEnabled: true,
+      },
+    });
 
-  return result.toDataStreamResponse({ sendReasoning: true });
+    return result.toDataStreamResponse({ sendReasoning: true });
+  } catch (error) {
+    console.error('Error processing request:', error);
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }

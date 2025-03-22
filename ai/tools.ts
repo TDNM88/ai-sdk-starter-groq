@@ -16,11 +16,12 @@ export const weatherTool = tool({
       `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&appid=${process.env.OPENWEATHERMAP_API_KEY}&units=metric&lang=vi`
     );
 
-    if (!response.ok) {
-      throw new Error("Không thể lấy thông tin thời tiết");
+    const data = await response.json();
+    
+    if (!response.ok || data.cod === "404") {
+      throw new Error(`Không tìm thấy thông tin thời tiết cho địa điểm "${location}"`);
     }
 
-    const data = await response.json();
     return {
       location: data.name,
       temperature: data.main.temp,
@@ -40,6 +41,9 @@ export const sendEmailTool = tool({
     body: z.string().describe("Nội dung email"),
   }),
   execute: async ({ to, subject, body }) => {
+    if (!to || to.trim().length === 0) {
+      throw new Error("Địa chỉ email người nhận không được để trống");
+    }
     try {
       // Kiểm tra định dạng email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -101,6 +105,16 @@ export const createFileTool = tool({
     }
 
     switch (fileType) {
+      case 'txt':
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        return {
+          success: true,
+          fileName: `${fileName}.txt`,
+          fileUrl: url,
+          message: "File TXT đã được tạo thành công"
+        };
+
       case 'pdf':
         const doc = new PDFDocument();
         const stream = doc.pipe(blobStream());
@@ -138,6 +152,9 @@ export const createChartTool = tool({
     title: z.string().optional().describe("Tiêu đề biểu đồ"),
   }),
   execute: async ({ chartType, data, title }) => {
+    if (!data || data.length === 0) {
+      throw new Error("Dữ liệu biểu đồ không được để trống");
+    }
     // Tạo canvas element
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
