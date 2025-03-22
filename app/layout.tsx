@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TDNM ASSISTANT",
+  title: "TRỢ LÝ ẢO TDNM",
   description:
-    "VIRTUAL Employee Products",
+    "Trợ lý ảo thông minh hỗ trợ công việc văn phòng",
 };
 
 export default function RootLayout({
