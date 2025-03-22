@@ -2,7 +2,7 @@
 
 import { modelID } from "@/ai/providers";
 import { useChat } from "@ai-sdk/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ModelPicker } from "./model-picker";
 import { Textarea } from "./textarea";
 import { ProjectOverview } from "./project-overview";
@@ -18,20 +18,28 @@ const ChatInput = ({ onSend }: ChatInputProps) => {
   const [file, setFile] = useState<File | null>(null);
 
   const handleSend = async (message: string, file?: File) => {
-    const formData = new FormData();
-    formData.append('message', message);
-    if (file) {
-      formData.append('file', file);
+    try {
+      const formData = new FormData();
+      formData.append('message', message);
+      if (file) {
+        formData.append('file', file);
+      }
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      onSend(message, file || undefined);
+      setMessage('');
+      setFile(null);
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
-
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      body: formData,
-    });
-
-    onSend(message, file || undefined);
-    setMessage('');
-    setFile(null);
   };
 
   return (
@@ -48,44 +56,12 @@ const ChatInput = ({ onSend }: ChatInputProps) => {
         className="flex-1 p-2 border rounded"
         onKeyPress={(e) => e.key === 'Enter' && handleSend(message, file || undefined)}
       />
-      <button onClick={() => handleSend(message, file || undefined)} className="p-2 bg-blue-500 text-white rounded">
+      <button 
+        onClick={() => handleSend(message, file || undefined)} 
+        className="p-2 bg-blue-500 text-white rounded"
+      >
         Gửi
       </button>
-    </div>
-  );
-};
-
-interface MessageProps {
-  message: {
-    text: string;
-    file?: {
-      name: string;
-      url: string;
-    };
-  };
-  isUser: boolean;
-}
-
-const Message = ({ message, isUser }: MessageProps) => {
-  return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[80%] p-3 rounded-lg ${
-        isUser ? 'bg-blue-500 text-white' : 'bg-gray-200'
-      }`}>
-        <p>{message.text}</p>
-        {message.file && (
-          <div className="mt-2">
-            <a 
-              href={message.file.url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-200 hover:text-blue-100"
-            >
-              {message.file.name}
-            </a>
-          </div>
-        )}
-      </div>
     </div>
   );
 };
@@ -100,7 +76,7 @@ export default function Chat() {
     error,
     status,
     stop,
-    append, // Add append to destructuring
+    append,
   } = useChat({
     maxSteps: 5,
     body: {
@@ -110,7 +86,6 @@ export default function Chat() {
 
   const isLoading = status === "streaming" || status === "submitted";
 
-  // Use sendMessage function
   const sendMessage = (input: string) => {
     append({ role: "user", content: input });
   };
@@ -120,11 +95,10 @@ export default function Chat() {
   return (
     <div className="h-dvh flex flex-col justify-center w-full stretch">
       <Header />
-      <ModelPicker selectedModel={selectedModel} setSelectedModel={setSelectedModel} /> {/* Use ModelPicker */}
+      <ModelPicker selectedModel={selectedModel} setSelectedModel={setSelectedModel} />
       {messages.length === 0 ? (
         <div className="max-w-xl mx-auto w-full">
           <ProjectOverview />
-          {/* <SuggestedPrompts sendMessage={sendMessage} /> */}
         </div>
       ) : (
         <Messages messages={messages} isLoading={isLoading} status={status} />
@@ -132,18 +106,11 @@ export default function Chat() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          sendMessage(input); // Call sendMessage on submit
-          handleSubmit(e); // Call existing handleSubmit
+          sendMessage(input);
+          handleSubmit(e);
         }}
         className="pb-8 bg-white dark:bg-black w-full max-w-xl mx-auto px-4 sm:px-0"
       >
-        {/* <Input
-          handleInputChange={handleInputChange}
-          input={input}
-          isLoading={isLoading}
-          status={status}
-          stop={stop}
-        /> */}
         <Textarea
           selectedModel={selectedModel}
           setSelectedModel={setSelectedModel}
