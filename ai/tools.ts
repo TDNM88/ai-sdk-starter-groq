@@ -40,43 +40,51 @@ export const sendEmailTool = tool({
     body: z.string().describe("Nội dung email"),
   }),
   execute: async ({ to, subject, body }) => {
-    // Kiểm tra định dạng email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(to)) {
-      throw new Error("Địa chỉ email không hợp lệ");
-    }
-
-    // Sử dụng Mailjet API
-    const response = await fetch('https://api.mailjet.com/v3.1/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${process.env.MAILJET_API_KEY}:${process.env.MAILJET_SECRET_KEY}`).toString('base64')}`
-      },
-      body: JSON.stringify({
-        Messages: [{
-          From: { Email: 'office@tdn-m.com', Name: 'TDNM Assistant' },
-          To: [{ Email: to }],
-          Subject: subject,
-          TextPart: body,
-          HTMLPart: `<p>${body.replace(/\n/g, '<br>')}</p>`
-        }]
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Gửi email thất bại: ${errorData.Messages?.[0]?.Errors?.[0]?.ErrorMessage || 'Unknown error'}`);
-    }
-
-    return { 
-      success: true, 
-      message: "Email đã được gửi thành công",
-      details: {
-        timestamp: new Date().toISOString(),
-        recipient: to
+    try {
+      // Kiểm tra định dạng email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(to)) {
+        throw new Error("Địa chỉ email không hợp lệ");
       }
-    };
+
+      // Sử dụng Mailjet API
+      const response = await fetch('https://api.mailjet.com/v3.1/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${Buffer.from(`${process.env.MAILJET_API_KEY}:${process.env.MAILJET_SECRET_KEY}`).toString('base64')}`
+        },
+        body: JSON.stringify({
+          Messages: [{
+            From: { Email: 'dung.ngt1988@gmail.com', Name: 'TDNM Assistant' },
+            To: [{ Email: to }],
+            Subject: subject,
+            TextPart: body,
+            HTMLPart: `<p>${body.replace(/\n/g, '<br>')}</p>`
+          }]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        const errorMessage = data.Messages?.[0]?.Errors?.[0]?.ErrorMessage || 'Unknown error';
+        throw new Error(`Gửi email thất bại: ${errorMessage}`);
+      }
+
+      return { 
+        success: true, 
+        message: "Email đã được gửi thành công",
+        details: {
+          timestamp: new Date().toISOString(),
+          recipient: to,
+          messageId: data.Messages?.[0]?.Status
+        }
+      };
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw new Error(`Lỗi khi gửi email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   },
 });
 
@@ -172,85 +180,4 @@ export const createChartTool = tool({
     return {
       success: true,
       chartUrl: imageUrl,
-      message: `Biểu đồ ${chartType} đã được tạo thành công`
-    };
-  },
-});
-
-export const searchTool = tool({
-  description: "Tìm kiếm thông tin trên web",
-  parameters: z.object({
-    query: z.string().describe("Từ khóa tìm kiếm"),
-    limit: z.number().optional().describe("Số lượng kết quả tối đa"),
-  }),
-  execute: async ({ query, limit = 5 }) => {
-    const response = await fetch(
-      `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(query)}&key=${process.env.GOOGLE_API_KEY}&cx=${process.env.GOOGLE_CSE_ID}&num=${limit}`
-    );
-
-    if (!response.ok) {
-      throw new Error("Tìm kiếm thất bại");
-    }
-
-    const data = await response.json();
-    return {
-      success: true,
-      results: data.items?.map((item: any) => ({
-        title: item.title,
-        link: item.link,
-        snippet: item.snippet
-      })) || [],
-      message: `Tìm thấy ${data.items?.length || 0} kết quả cho "${query}"`
-    };
-  },
-});
-
-export const scheduleMeetingTool = tool({
-  description: "Tạo và quản lý lịch họp",
-  parameters: z.object({
-    title: z.string().describe("Tiêu đề cuộc họp"),
-    participants: z.array(z.string()).describe("Danh sách email người tham gia"),
-    startTime: z.string().describe("Thời gian bắt đầu (ISO format)"),
-    duration: z.number().describe("Thời lượng cuộc họp (phút)"),
-    agenda: z.string().optional().describe("Nội dung chính của cuộc họp"),
-  }),
-  execute: async ({ title, participants, startTime, duration, agenda }) => {
-    const start = new Date(startTime);
-    const end = new Date(start.getTime() + duration * 60000);
-
-    // Kiểm tra thời gian hợp lệ
-    if (start < new Date()) {
-      throw new Error("Thời gian bắt đầu phải trong tương lai");
-    }
-
-    // Tạo sự kiện trên Google Calendar
-    const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GOOGLE_CALENDAR_TOKEN}`
-      },
-      body: JSON.stringify({
-        summary: title,
-        description: agenda,
-        start: { dateTime: start.toISOString() },
-        end: { dateTime: end.toISOString() },
-        attendees: participants.map(email => ({ email })),
-        reminders: {
-          useDefault: true
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error("Tạo cuộc họp thất bại");
-    }
-
-    const event = await response.json();
-    return {
-      success: true,
-      event,
-      message: `Cuộc họp "${title}" đã được lên lịch thành công`
-    };
-  },
-});
+      message: `
